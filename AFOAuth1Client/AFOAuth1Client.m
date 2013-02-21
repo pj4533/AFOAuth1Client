@@ -211,11 +211,16 @@ static inline NSString * AFHMACSHA1Signature(NSURLRequest *request, NSString *co
 - (NSString *)authorizationHeaderForParameters:(NSDictionary *)parameters {
     static NSString * const kAFOAuth1AuthorizationFormatString = @"OAuth %@";
 
-    if (!parameters) {
-        return nil;
+    NSMutableDictionary *mutableParameters = parameters ? [parameters mutableCopy] : [NSMutableDictionary dictionary];
+    
+    if (self.accessToken) {
+        [mutableParameters addEntriesFromDictionary:[self OAuthParameters]];
+        [mutableParameters setValue:self.accessToken.key forKey:@"oauth_token"];
     }
+    
+    [mutableParameters setValue:[self OAuthSignatureForMethod:method path:path parameters:mutableParameters token:self.accessToken] forKey:@"oauth_signature"];
 
-    NSArray *sortedComponents = [[AFQueryStringFromParametersWithEncoding(parameters, self.stringEncoding) componentsSeparatedByString:@"&"] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
+    NSArray *sortedComponents = [[AFQueryStringFromParametersWithEncoding(mutableParameters, self.stringEncoding) componentsSeparatedByString:@"&"] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
     NSMutableArray *mutableComponents = [NSMutableArray array];
     for (NSString *component in sortedComponents) {
         NSArray *subcomponents = [component componentsSeparatedByString:@"="];
@@ -327,19 +332,22 @@ static inline NSString * AFHMACSHA1Signature(NSURLRequest *request, NSString *co
                                       path:(NSString *)path
                                 parameters:(NSDictionary *)parameters
 {
-    NSMutableDictionary *mutableParameters = parameters ? [parameters mutableCopy] : [NSMutableDictionary dictionary];
-
-    if (self.accessToken) {
-        [mutableParameters addEntriesFromDictionary:[self OAuthParameters]];
-        [mutableParameters setValue:self.accessToken.key forKey:@"oauth_token"];
-    }
-
-    [mutableParameters setValue:[self OAuthSignatureForMethod:method path:path parameters:mutableParameters token:self.accessToken] forKey:@"oauth_signature"];
-
     NSMutableURLRequest *request = [super requestWithMethod:method path:path parameters:parameters];
-    [request setValue:[self authorizationHeaderForParameters:mutableParameters] forHTTPHeaderField:@"Authorization"];
+    [request setValue:[self authorizationHeaderForParameters:parameters] forHTTPHeaderField:@"Authorization"];
     [request setHTTPShouldHandleCookies:NO];
 
+    return request;
+}
+
+- (NSMutableURLRequest *)multipartFormRequestWithMethod:(NSString *)method
+                                                   path:(NSString *)path
+                                             parameters:(NSDictionary *)parameters
+                              constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block
+{
+    NSMutableURLRequest* request = [super multipartFormRequestWithMethod:method path:path parameters:parameters constructingBodyWithBlock:block];
+    [request setValue:[self authorizationHeaderForParameters:parameters] forHTTPHeaderField:@"Authorization"];
+    [request setHTTPShouldHandleCookies:NO];
+    
     return request;
 }
 
