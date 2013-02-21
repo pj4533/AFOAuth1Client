@@ -208,7 +208,9 @@ static inline NSString * AFHMACSHA1Signature(NSURLRequest *request, NSString *co
     }
 }
 
-- (NSString *)authorizationHeaderForParameters:(NSDictionary *)parameters {
+- (NSString *)authorizationHeaderForMethod:(NSString*)method
+                                      path:(NSString*)path
+                                parameters:(NSDictionary *)parameters {
     static NSString * const kAFOAuth1AuthorizationFormatString = @"OAuth %@";
 
     NSMutableDictionary *mutableParameters = parameters ? [parameters mutableCopy] : [NSMutableDictionary dictionary];
@@ -333,7 +335,7 @@ static inline NSString * AFHMACSHA1Signature(NSURLRequest *request, NSString *co
                                 parameters:(NSDictionary *)parameters
 {
     NSMutableURLRequest *request = [super requestWithMethod:method path:path parameters:parameters];
-    [request setValue:[self authorizationHeaderForParameters:parameters] forHTTPHeaderField:@"Authorization"];
+    [request setValue:[self authorizationHeaderForMethod:method path:path parameters:parameters] forHTTPHeaderField:@"Authorization"];
     [request setHTTPShouldHandleCookies:NO];
 
     return request;
@@ -345,7 +347,7 @@ static inline NSString * AFHMACSHA1Signature(NSURLRequest *request, NSString *co
                               constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block
 {
     NSMutableURLRequest* request = [super multipartFormRequestWithMethod:method path:path parameters:parameters constructingBodyWithBlock:block];
-    [request setValue:[self authorizationHeaderForParameters:parameters] forHTTPHeaderField:@"Authorization"];
+    [request setValue:[self authorizationHeaderForMethod:method path:path parameters:parameters] forHTTPHeaderField:@"Authorization"];
     [request setHTTPShouldHandleCookies:NO];
     
     return request;
